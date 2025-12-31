@@ -8,6 +8,23 @@ An AI-powered document processing system that automates invoice data extraction 
 ![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6?logo=typescript&logoColor=white)
 ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4_Vision-412991?logo=openai&logoColor=white)
 
+## Screenshots
+
+### Login Page
+![Login Page](docs/login.png)
+
+### Invoice Dashboard
+![Dashboard](docs/dashboard.png)
+
+### Document Upload
+![Upload](docs/upload.png)
+
+### Invoice Review & Edit
+![Review](docs/review.png)
+
+### Audit Trail
+![Audit Log](docs/audit.png)
+
 ## Features
 
 - **Smart AI Extraction** - Upload any PDF (invoices, receipts, bills, purchase orders) and GPT-4 Vision extracts structured data regardless of format
@@ -58,7 +75,7 @@ sudo apt-get install poppler-utils
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/YOUR_USERNAME/invoice-erp-automation.git
+git clone https://github.com/shivenpaudyal9/invoice-erp-automation.git
 cd invoice-erp-automation
 ```
 
@@ -146,6 +163,7 @@ invoice-erp-automation/
 │   │   └── main.tsx
 │   ├── package.json
 │   └── vite.config.ts
+├── docs/                   # Screenshots
 ├── start-demo.bat          # Windows quick start
 ├── stop-demo.bat           # Windows stop servers
 └── README.md
@@ -208,6 +226,10 @@ To switch to real AI extraction:
 1. Set `USE_MOCK_EXTRACTION=false` in `.env`
 2. Add your `OPENAI_API_KEY`
 3. Restart the backend server
+
+## Author
+
+**Shiven Paudyal** - [GitHub](https://github.com/shivenpaudyal9)
 
 ## License
 
