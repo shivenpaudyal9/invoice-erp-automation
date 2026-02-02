@@ -8,7 +8,8 @@ import type {
   AuthToken
 } from '../types/invoice';
 
-const API_BASE = '/api';
+// Use environment variable for API URL, fallback to /api for local development with proxy
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -131,13 +132,15 @@ export const auditApi = {
 // Export API
 export const exportApi = {
   invoiceJson: (id: string, includeAudit = true): string => {
+    const baseUrl = import.meta.env.VITE_API_URL || '';
     const token = localStorage.getItem('token');
-    return `${API_BASE}/invoices/${id}/export/json?include_audit=${includeAudit}&token=${token}`;
+    return `${baseUrl}/api/invoices/${id}/export/json?include_audit=${includeAudit}&token=${token}`;
   },
 
   invoiceCsv: (id: string): string => {
+    const baseUrl = import.meta.env.VITE_API_URL || '';
     const token = localStorage.getItem('token');
-    return `${API_BASE}/invoices/${id}/export/csv?token=${token}`;
+    return `${baseUrl}/api/invoices/${id}/export/csv?token=${token}`;
   },
 
   downloadInvoiceJson: async (id: string, includeAudit = true): Promise<void> => {

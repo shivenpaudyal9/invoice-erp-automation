@@ -25,6 +25,10 @@ class Invoice(Base):
     __tablename__ = "invoices"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+
+    # User ownership for multi-user support
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+
     filename = Column(String, nullable=False)
     upload_date = Column(DateTime, default=datetime.utcnow)
     status = Column(String, default=InvoiceStatus.PENDING.value)
@@ -55,6 +59,7 @@ class Invoice(Base):
     raw_extraction = Column(JSON, nullable=True)
 
     # Relationships
+    user = relationship("User", back_populates="invoices")
     line_items = relationship("LineItem", back_populates="invoice", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="invoice", cascade="all, delete-orphan")
 

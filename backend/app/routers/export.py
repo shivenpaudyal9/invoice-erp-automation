@@ -40,7 +40,10 @@ def export_invoice_json(
     db: Session = Depends(get_db)
 ):
     """Export a single invoice as ERP-ready JSON."""
-    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    invoice = db.query(Invoice).filter(
+        Invoice.id == invoice_id,
+        Invoice.user_id == current_user.id
+    ).first()
     if not invoice:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -62,7 +65,10 @@ def export_invoice_csv(
     db: Session = Depends(get_db)
 ):
     """Export a single invoice as CSV."""
-    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    invoice = db.query(Invoice).filter(
+        Invoice.id == invoice_id,
+        Invoice.user_id == current_user.id
+    ).first()
     if not invoice:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -90,7 +96,10 @@ def export_batch_json(
     db: Session = Depends(get_db)
 ):
     """Batch export multiple invoices as JSON."""
-    invoices = db.query(Invoice).filter(Invoice.id.in_(invoice_ids)).all()
+    invoices = db.query(Invoice).filter(
+        Invoice.id.in_(invoice_ids),
+        Invoice.user_id == current_user.id
+    ).all()
 
     if not invoices:
         raise HTTPException(
@@ -114,7 +123,10 @@ def export_batch_csv(
     db: Session = Depends(get_db)
 ):
     """Batch export multiple invoices as CSV."""
-    invoices = db.query(Invoice).filter(Invoice.id.in_(invoice_ids)).all()
+    invoices = db.query(Invoice).filter(
+        Invoice.id.in_(invoice_ids),
+        Invoice.user_id == current_user.id
+    ).all()
 
     if not invoices:
         raise HTTPException(
@@ -142,9 +154,10 @@ def export_approved_invoices_json(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Export all approved invoices as JSON."""
+    """Export all approved invoices as JSON (user's invoices only)."""
     invoices = db.query(Invoice).filter(
-        Invoice.status == InvoiceStatus.APPROVED.value
+        Invoice.status == InvoiceStatus.APPROVED.value,
+        Invoice.user_id == current_user.id
     ).all()
 
     if not invoices:

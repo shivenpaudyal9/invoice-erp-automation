@@ -91,8 +91,9 @@ async def upload_invoice(
             detail=f"Failed to save file: {str(e)}"
         )
 
-    # Create invoice record
+    # Create invoice record with user ownership
     invoice = Invoice(
+        user_id=current_user.id,
         filename=file.filename,
         pdf_path=str(file_path),
         status=InvoiceStatus.PENDING.value
@@ -189,8 +190,9 @@ def list_invoices(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """List all invoices with optional filters."""
-    query = db.query(Invoice)
+    """List user's invoices with optional filters."""
+    # Filter by current user - each user only sees their own invoices
+    query = db.query(Invoice).filter(Invoice.user_id == current_user.id)
 
     if status:
         query = query.filter(Invoice.status == status)
@@ -214,8 +216,11 @@ def get_invoice(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get a single invoice by ID."""
-    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    """Get a single invoice by ID (only if owned by current user)."""
+    invoice = db.query(Invoice).filter(
+        Invoice.id == invoice_id,
+        Invoice.user_id == current_user.id
+    ).first()
     if not invoice:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -232,7 +237,10 @@ def update_invoice(
     db: Session = Depends(get_db)
 ):
     """Update invoice fields (human review/edit)."""
-    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    invoice = db.query(Invoice).filter(
+        Invoice.id == invoice_id,
+        Invoice.user_id == current_user.id
+    ).first()
     if not invoice:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -284,7 +292,10 @@ def approve_invoice(
     db: Session = Depends(get_db)
 ):
     """Approve an invoice for ERP export."""
-    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    invoice = db.query(Invoice).filter(
+        Invoice.id == invoice_id,
+        Invoice.user_id == current_user.id
+    ).first()
     if not invoice:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -328,7 +339,10 @@ def reject_invoice(
     db: Session = Depends(get_db)
 ):
     """Reject an invoice."""
-    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    invoice = db.query(Invoice).filter(
+        Invoice.id == invoice_id,
+        Invoice.user_id == current_user.id
+    ).first()
     if not invoice:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -366,7 +380,10 @@ async def reextract_invoice(
     db: Session = Depends(get_db)
 ):
     """Re-run AI extraction on an invoice."""
-    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    invoice = db.query(Invoice).filter(
+        Invoice.id == invoice_id,
+        Invoice.user_id == current_user.id
+    ).first()
     if not invoice:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
