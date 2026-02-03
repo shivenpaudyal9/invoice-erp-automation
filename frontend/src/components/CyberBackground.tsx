@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function CyberBackground() {
   return (
     <div className="cyber-bg">

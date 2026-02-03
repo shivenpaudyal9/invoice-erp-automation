@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { invoiceApi, exportApi, auditApi } from '../services/api';
 import LineItemsTable from './LineItemsTable';
-import type { Invoice, InvoiceUpdate, LineItem, AuditLog } from '../types/invoice';
+import type { InvoiceUpdate, LineItem, AuditLog } from '../types/invoice';
 import toast from 'react-hot-toast';
 
 export default function InvoiceReview() {

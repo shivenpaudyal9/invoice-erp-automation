@@ -1,4 +1,3 @@
-import React from 'react';
 import type { LineItem } from '../types/invoice';
 
 interface LineItemsTableProps {
