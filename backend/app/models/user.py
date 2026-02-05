@@ -17,4 +17,4 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    invoices = relationship("Invoice", back_populates="user", cascade="all, delete-orphan")
+    invoices = relationship("Invoice", back_populates="user", cascade="all, delete-orphan", foreign_keys="[Invoice.user_id]")

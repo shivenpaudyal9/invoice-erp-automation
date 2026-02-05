@@ -59,7 +59,7 @@ class Invoice(Base):
     raw_extraction = Column(JSON, nullable=True)
 
     # Relationships
-    user = relationship("User", back_populates="invoices")
+    user = relationship("User", back_populates="invoices", foreign_keys=[user_id])
     line_items = relationship("LineItem", back_populates="invoice", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="invoice", cascade="all, delete-orphan")
 
