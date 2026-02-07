@@ -66,7 +66,7 @@ def invoice_to_dict(invoice: Invoice) -> dict:
 @router.post("/upload", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED)
 async def upload_invoice(
     file: UploadFile = File(...),
-    field_names: Optional[str] = Form(None),
+    field_names: Optional[str] = Form(default=None),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
