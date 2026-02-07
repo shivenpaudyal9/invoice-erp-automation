@@ -14,6 +14,7 @@ import {
   Cpu,
   Zap,
   Shield,
+  Tag,
 } from 'lucide-react';
 import { invoiceApi, exportApi, auditApi } from '../services/api';
 import LineItemsTable from './LineItemsTable';
@@ -28,6 +29,7 @@ export default function InvoiceReview() {
   const [showAudit, setShowAudit] = useState(false);
   const [editedInvoice, setEditedInvoice] = useState<InvoiceUpdate>({});
   const [editedLineItems, setEditedLineItems] = useState<LineItem[]>([]);
+  const [editedCustomFields, setEditedCustomFields] = useState<Record<string, string | number | null>>({});
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ['invoice', id],
@@ -95,6 +97,7 @@ export default function InvoiceReview() {
         currency: invoice.currency,
       });
       setEditedLineItems([...invoice.line_items]);
+      setEditedCustomFields(invoice.custom_fields ? { ...invoice.custom_fields } : {});
       setIsEditing(true);
     }
   };
@@ -108,6 +111,7 @@ export default function InvoiceReview() {
         unit_price: item.unit_price,
         amount: item.amount,
       })),
+      custom_fields: Object.keys(editedCustomFields).length > 0 ? editedCustomFields : undefined,
     });
   };
 
@@ -435,6 +439,40 @@ export default function InvoiceReview() {
               onChange={handleLineItemChange}
             />
           </div>
+
+          {/* Custom Fields */}
+          {(invoice.custom_fields && Object.keys(invoice.custom_fields).length > 0) && (
+            <div className="glass-card">
+              <div className="flex items-center space-x-2 mb-4">
+                <Tag className="h-5 w-5 text-cyber-purple" />
+                <h2 className="text-lg font-orbitron font-semibold text-white">CUSTOM FIELDS</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {Object.entries(isEditing ? editedCustomFields : invoice.custom_fields).map(([key, value]) => (
+                  <div key={key}>
+                    <label className="block text-xs font-rajdhani font-semibold text-gray-400 mb-2">
+                      {key.toUpperCase()}
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={value ?? ''}
+                        onChange={(e) =>
+                          setEditedCustomFields((prev) => ({
+                            ...prev,
+                            [key]: e.target.value,
+                          }))
+                        }
+                        className="cyber-input"
+                      />
+                    ) : (
+                      <p className="text-white font-rajdhani">{value ?? '-'}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}

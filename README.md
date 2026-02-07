@@ -1,12 +1,12 @@
 # Invoice-to-ERP Automation System
 
-An AI-powered document processing system that automates invoice data extraction using GPT-4 Vision, with human-in-the-loop validation and ERP-ready exports.
+An AI-powered document processing system that automates invoice data extraction using Google Gemini AI, with human-in-the-loop validation, custom field extraction, and ERP-ready exports.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-18+-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6?logo=typescript&logoColor=white)
-![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4_Vision-412991?logo=openai&logoColor=white)
+![Gemini](https://img.shields.io/badge/Google-Gemini_AI-4285F4?logo=google&logoColor=white)
 
 ## Screenshots
 
@@ -27,7 +27,8 @@ An AI-powered document processing system that automates invoice data extraction 
 
 ## Features
 
-- **Smart AI Extraction** - Upload any PDF (invoices, receipts, bills, purchase orders) and GPT-4 Vision extracts structured data regardless of format
+- **Smart AI Extraction** - Upload any PDF (invoices, receipts, bills, purchase orders) and Gemini AI extracts structured data regardless of format
+- **Custom Field Extraction** - Define custom fields (PO Number, Payment Terms, etc.) for the AI to extract from each document
 - **Human Review Workflow** - Review, edit, approve or reject extracted data before export
 - **Automatic Validation** - Catches math errors (line items vs totals) with configurable tolerance
 - **Complete Audit Trail** - Every action logged with user, timestamp, and before/after changes
@@ -40,7 +41,7 @@ An AI-powered document processing system that automates invoice data extraction 
 ### Backend
 - **FastAPI** - Modern async Python web framework
 - **SQLAlchemy** - ORM with SQLite database
-- **OpenAI GPT-4 Vision** - AI-powered document understanding
+- **Google Gemini AI** - AI-powered document understanding (free tier)
 - **pdf2image + Pillow** - PDF to image conversion
 - **Pydantic** - Request/response validation
 - **python-jose + passlib** - JWT authentication
@@ -119,8 +120,9 @@ npm run dev
 Create a `.env` file in the `backend` directory:
 
 ```env
-# OpenAI API (optional - uses mock mode if not set)
-OPENAI_API_KEY=sk-your-key-here
+# Google Gemini API (optional - uses mock mode if not set)
+# Get free key from: https://aistudio.google.com
+GEMINI_API_KEY=your-gemini-api-key-here
 
 # Database
 DATABASE_URL=sqlite:///./invoices.db
@@ -132,7 +134,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=60
 # File Upload
 UPLOAD_DIR=./uploads
 
-# Demo Mode (set to false for real AI extraction)
+# Demo Mode (set to false for real Gemini extraction)
 USE_MOCK_EXTRACTION=true
 ```
 
@@ -220,11 +222,11 @@ invoice-erp-automation/
 
 ## Demo Mode
 
-The application includes a demo mode with mock AI extraction for testing without OpenAI API costs. Mock mode generates realistic invoice data with varied vendors, amounts, and document types.
+The application includes a demo mode with mock AI extraction for testing without API costs. Mock mode generates realistic invoice data with varied vendors, amounts, document types, and custom fields.
 
 To switch to real AI extraction:
 1. Set `USE_MOCK_EXTRACTION=false` in `.env`
-2. Add your `OPENAI_API_KEY`
+2. Add your `GEMINI_API_KEY` (free from https://aistudio.google.com)
 3. Restart the backend server
 
 ## Author

@@ -58,6 +58,10 @@ class Invoice(Base):
     ai_model_version = Column(String, nullable=True)
     raw_extraction = Column(JSON, nullable=True)
 
+    # Custom extraction fields
+    custom_fields = Column(JSON, nullable=True)
+    requested_fields = Column(JSON, nullable=True)
+
     # Relationships
     user = relationship("User", back_populates="invoices", foreign_keys=[user_id])
     line_items = relationship("LineItem", back_populates="invoice", cascade="all, delete-orphan")

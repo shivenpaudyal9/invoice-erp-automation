@@ -36,6 +36,8 @@ export interface Invoice {
   reviewed_at: string | null;
   ai_model_version: string | null;
   line_items: LineItem[];
+  custom_fields: Record<string, string | number | null> | null;
+  requested_fields: string[] | null;
 }
 
 export interface InvoiceListResponse {
@@ -81,6 +83,7 @@ export interface InvoiceUpdate {
     unit_price?: number;
     amount?: number;
   }[];
+  custom_fields?: Record<string, string | number | null>;
 }
 
 export interface AuthToken {

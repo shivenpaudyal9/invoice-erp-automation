@@ -35,7 +35,8 @@ class ExportService:
                         "amount": item.amount
                     }
                     for item in invoice.line_items
-                ]
+                ],
+                "custom_fields": invoice.custom_fields or {}
             },
             "processing_info": {
                 "status": invoice.status,
@@ -81,6 +82,10 @@ class ExportService:
         output.write(f"# Total: {invoice.total or 0:.2f}\n")
         output.write(f"# Status: {invoice.status}\n")
         output.write(f"# Validation: {invoice.validation_status}\n")
+        if invoice.custom_fields:
+            output.write("#\n# Custom Fields:\n")
+            for key, val in invoice.custom_fields.items():
+                output.write(f"# {key}: {val}\n")
         output.write("#\n")
 
         # Line items as CSV

@@ -10,18 +10,18 @@ from pdf2image import convert_from_path
 from PIL import Image
 import io
 
-from app.config import OPENAI_API_KEY, AI_MODEL, AI_MODEL_VERSION
+from app.config import GEMINI_API_KEY, AI_MODEL, AI_MODEL_VERSION
 from app.schemas.invoice import ExtractionResult, LineItemCreate
 
 # Check if we should use mock mode
-USE_MOCK_MODE = os.getenv("USE_MOCK_EXTRACTION", "true").lower() == "true" or not OPENAI_API_KEY
+USE_MOCK_MODE = os.getenv("USE_MOCK_EXTRACTION", "true").lower() == "true" or not GEMINI_API_KEY
 
 
 class ExtractionService:
     """Smart extraction service that works with any document format."""
 
-    # Enhanced prompt for any document type
-    EXTRACTION_PROMPT = """You are an intelligent document analyzer. Analyze this document image and extract financial/invoice information.
+    # Base extraction prompt for standard fields
+    BASE_EXTRACTION_PROMPT = """You are an intelligent document analyzer. Analyze this document image and extract financial/invoice information.
 
 This could be ANY type of document - invoice, receipt, bill, purchase order, quote, etc.
 Extract whatever information you can find and map it to this structure:
@@ -133,14 +133,41 @@ IMPORTANT:
 
     DOCUMENT_TYPES = ["invoice", "receipt", "bill", "purchase_order", "quote", "statement"]
 
+    # Mock values for common custom fields
+    MOCK_CUSTOM_FIELD_VALUES = {
+        "po number": lambda: f"PO-{random.randint(10000, 99999)}",
+        "purchase order": lambda: f"PO-{random.randint(10000, 99999)}",
+        "payment terms": lambda: random.choice(["Net 30", "Net 60", "Net 15", "Due on Receipt", "2/10 Net 30"]),
+        "shipping address": lambda: random.choice([
+            "123 Main St, New York, NY 10001",
+            "456 Oak Ave, San Francisco, CA 94102",
+            "789 Pine Rd, Chicago, IL 60601",
+        ]),
+        "billing address": lambda: random.choice([
+            "100 Corporate Blvd, Suite 200, Dallas, TX 75201",
+            "200 Business Park Dr, Austin, TX 73301",
+            "300 Commerce St, Seattle, WA 98101",
+        ]),
+        "contact email": lambda: random.choice(["billing@company.com", "accounts@vendor.com", "finance@corp.com"]),
+        "contact phone": lambda: f"+1-{random.randint(200,999)}-{random.randint(100,999)}-{random.randint(1000,9999)}",
+        "tax id": lambda: f"{random.randint(10,99)}-{random.randint(1000000,9999999)}",
+        "project code": lambda: f"PRJ-{random.randint(1000, 9999)}",
+        "department": lambda: random.choice(["Engineering", "Marketing", "Operations", "Finance", "HR"]),
+        "contract number": lambda: f"CNT-{random.randint(10000, 99999)}",
+        "delivery date": lambda: (datetime.now() + timedelta(days=random.randint(7, 60))).strftime("%Y-%m-%d"),
+        "warranty": lambda: random.choice(["12 months", "24 months", "36 months", "None"]),
+        "discount": lambda: f"{random.choice([5, 10, 15, 20])}%",
+    }
+
     def __init__(self):
         self.use_mock = USE_MOCK_MODE
         self.client = None
 
-        if not self.use_mock and OPENAI_API_KEY:
+        if not self.use_mock and GEMINI_API_KEY:
             try:
-                from openai import OpenAI
-                self.client = OpenAI(api_key=OPENAI_API_KEY)
+                import google.generativeai as genai
+                genai.configure(api_key=GEMINI_API_KEY)
+                self.client = genai.GenerativeModel(AI_MODEL)
             except Exception:
                 self.use_mock = True
 
@@ -150,6 +177,25 @@ IMPORTANT:
         if self.use_mock:
             self.model = "smart-extractor"
             self.model_version = "demo-2.0"
+
+    def build_prompt(self, field_names: Optional[List[str]] = None) -> str:
+        """Build dynamic extraction prompt, optionally including user-specified custom fields."""
+        prompt = self.BASE_EXTRACTION_PROMPT
+
+        if field_names:
+            custom_fields_json = ", ".join(f'"{name}": "extracted value or null"' for name in field_names)
+            prompt += f"""
+
+ADDITIONALLY, extract these custom fields from the document and include them in a "custom_fields" key:
+
+{{
+    {custom_fields_json}
+}}
+
+If a custom field cannot be found in the document, set its value to null.
+Include the "custom_fields" object in your JSON response alongside the other fields."""
+
+        return prompt
 
     def pdf_to_images(self, pdf_path: str) -> List[bytes]:
         """Convert PDF pages to images."""
@@ -171,7 +217,24 @@ IMPORTANT:
         """Convert image bytes to base64 string."""
         return base64.b64encode(image_bytes).decode('utf-8')
 
-    def _generate_mock_extraction(self, pdf_path: str) -> Dict[str, Any]:
+    def _generate_mock_custom_fields(self, field_names: List[str]) -> Dict[str, Any]:
+        """Generate mock values for custom fields."""
+        result = {}
+        for name in field_names:
+            name_lower = name.lower().strip()
+            generator = self.MOCK_CUSTOM_FIELD_VALUES.get(name_lower)
+            if generator:
+                result[name] = generator()
+            else:
+                # Generic mock value for unknown fields
+                result[name] = random.choice([
+                    f"Sample {name}",
+                    f"REF-{random.randint(1000, 9999)}",
+                    None,
+                ])
+        return result
+
+    def _generate_mock_extraction(self, pdf_path: str, field_names: Optional[List[str]] = None) -> Dict[str, Any]:
         """Generate smart mock extraction for any document type."""
 
         filename = os.path.basename(pdf_path)
@@ -254,7 +317,7 @@ IMPORTANT:
             "Omega Holdings",
         ]
 
-        return {
+        result = {
             "vendor_name": vendor,
             "invoice_number": ref_num,
             "invoice_date": doc_date,
@@ -280,34 +343,32 @@ IMPORTANT:
             "_category": category
         }
 
-    def extract_from_image(self, image_base64: str) -> Dict[str, Any]:
-        """Extract data from image using GPT-4 Vision."""
+        # Add custom fields if requested
+        if field_names:
+            result["custom_fields"] = self._generate_mock_custom_fields(field_names)
+
+        return result
+
+    def extract_from_image_gemini(self, image_bytes: bytes, prompt: str) -> Dict[str, Any]:
+        """Extract data from image using Google Gemini."""
         if not self.client:
-            raise Exception("OpenAI API key not configured")
+            raise Exception("Gemini API key not configured")
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": self.EXTRACTION_PROMPT},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/png;base64,{image_base64}",
-                                    "detail": "high"
-                                }
-                            }
-                        ]
-                    }
-                ],
-                max_tokens=4096,
-                temperature=0.1
+            import google.generativeai as genai
+
+            # Create image part for Gemini
+            image = Image.open(io.BytesIO(image_bytes))
+
+            response = self.client.generate_content(
+                [prompt, image],
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.1,
+                    max_output_tokens=4096,
+                ),
             )
 
-            content = response.choices[0].message.content
+            content = response.text
             json_match = re.search(r'\{[\s\S]*\}', content)
             if json_match:
                 return json.loads(json_match.group())
@@ -319,17 +380,17 @@ IMPORTANT:
         except Exception as e:
             raise Exception(f"Extraction failed: {str(e)}")
 
-    def extract_from_pdf(self, pdf_path: str) -> tuple[ExtractionResult, Dict[str, Any]]:
+    def extract_from_pdf(self, pdf_path: str, field_names: Optional[List[str]] = None) -> tuple[ExtractionResult, Dict[str, Any]]:
         """Extract data from any PDF document type."""
 
         if self.use_mock:
-            raw_data = self._generate_mock_extraction(pdf_path)
+            raw_data = self._generate_mock_extraction(pdf_path, field_names)
         else:
             images = self.pdf_to_images(pdf_path)
             if not images:
                 raise Exception("No images could be extracted from PDF")
-            image_base64 = self.image_to_base64(images[0])
-            raw_data = self.extract_from_image(image_base64)
+            prompt = self.build_prompt(field_names)
+            raw_data = self.extract_from_image_gemini(images[0], prompt)
 
         # Parse into ExtractionResult
         line_items = []
@@ -350,7 +411,8 @@ IMPORTANT:
             tax=float(raw_data.get("tax", 0)) if raw_data.get("tax") else None,
             total=float(raw_data.get("total", 0)) if raw_data.get("total") else None,
             currency=raw_data.get("currency", "USD"),
-            line_items=line_items
+            line_items=line_items,
+            custom_fields=raw_data.get("custom_fields"),
         )
 
         return result, raw_data

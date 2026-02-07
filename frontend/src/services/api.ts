@@ -63,9 +63,12 @@ export const authApi = {
 
 // Invoice API
 export const invoiceApi = {
-  upload: async (file: File): Promise<Invoice> => {
+  upload: async (file: File, fieldNames?: string[]): Promise<Invoice> => {
     const formData = new FormData();
     formData.append('file', file);
+    if (fieldNames && fieldNames.length > 0) {
+      formData.append('field_names', JSON.stringify(fieldNames));
+    }
     const response = await api.post('/invoices/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });

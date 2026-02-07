@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime, date
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 
 
 class LineItemCreate(BaseModel):
@@ -44,6 +44,7 @@ class InvoiceUpdate(BaseModel):
     total: Optional[float] = None
     currency: Optional[str] = None
     line_items: Optional[List[LineItemUpdate]] = None
+    custom_fields: Optional[Dict[str, Any]] = None
 
 
 class InvoiceResponse(BaseModel):
@@ -66,6 +67,8 @@ class InvoiceResponse(BaseModel):
     reviewed_at: Optional[datetime]
     ai_model_version: Optional[str]
     line_items: List[LineItemResponse]
+    custom_fields: Optional[Dict[str, Any]] = None
+    requested_fields: Optional[List[str]] = None
 
     class Config:
         from_attributes = True
@@ -88,3 +91,4 @@ class ExtractionResult(BaseModel):
     total: Optional[float] = None
     currency: str = "USD"
     line_items: List[LineItemCreate] = []
+    custom_fields: Optional[Dict[str, Any]] = None

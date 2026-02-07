@@ -1,13 +1,29 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, FileText, Loader2, X, Cpu, Zap, Sparkles } from 'lucide-react';
+import { Upload, FileText, Loader2, X, Cpu, Zap, Sparkles, Plus, Tag } from 'lucide-react';
 import { invoiceApi } from '../services/api';
 import toast from 'react-hot-toast';
+
+const SUGGESTED_FIELDS = [
+  'PO Number',
+  'Payment Terms',
+  'Shipping Address',
+  'Billing Address',
+  'Contact Email',
+  'Tax ID',
+  'Project Code',
+  'Department',
+  'Contract Number',
+  'Delivery Date',
+  'Discount',
+];
 
 export default function InvoiceUpload() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [customFields, setCustomFields] = useState<string[]>([]);
+  const [fieldInput, setFieldInput] = useState('');
   const navigate = useNavigate();
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -43,12 +59,37 @@ export default function InvoiceUpload() {
     }
   };
 
+  const addField = () => {
+    const trimmed = fieldInput.trim();
+    if (trimmed && !customFields.includes(trimmed)) {
+      setCustomFields((prev) => [...prev, trimmed]);
+      setFieldInput('');
+    }
+  };
+
+  const addSuggestedField = (name: string) => {
+    if (!customFields.includes(name)) {
+      setCustomFields((prev) => [...prev, name]);
+    }
+  };
+
+  const removeField = (name: string) => {
+    setCustomFields((prev) => prev.filter((f) => f !== name));
+  };
+
+  const handleFieldKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addField();
+    }
+  };
+
   const handleUpload = async () => {
     if (!file) return;
 
     setIsUploading(true);
     try {
-      const invoice = await invoiceApi.upload(file);
+      const invoice = await invoiceApi.upload(file, customFields.length > 0 ? customFields : undefined);
       toast.success('Document processed successfully');
       navigate(`/invoices/${invoice.id}`);
     } catch (error: unknown) {
@@ -134,6 +175,71 @@ export default function InvoiceUpload() {
               </button>
             </div>
 
+            {/* Custom Fields Section */}
+            <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+              <div className="flex items-center space-x-2 mb-3">
+                <Tag className="h-5 w-5 text-cyber-purple" />
+                <h3 className="font-rajdhani font-semibold text-white text-sm">CUSTOM EXTRACTION FIELDS</h3>
+                <span className="text-xs text-gray-500">(optional)</span>
+              </div>
+              <p className="text-xs text-gray-400 mb-3">
+                Add field names you want the AI to extract from this document.
+              </p>
+
+              {/* Input row */}
+              <div className="flex space-x-2 mb-3">
+                <input
+                  type="text"
+                  value={fieldInput}
+                  onChange={(e) => setFieldInput(e.target.value)}
+                  onKeyDown={handleFieldKeyDown}
+                  placeholder="e.g. PO Number, Payment Terms..."
+                  className="cyber-input flex-1 text-sm"
+                />
+                <button
+                  onClick={addField}
+                  disabled={!fieldInput.trim()}
+                  className="cyber-btn cyber-btn-secondary text-sm flex items-center space-x-1 disabled:opacity-30"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>ADD</span>
+                </button>
+              </div>
+
+              {/* Suggested presets */}
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {SUGGESTED_FIELDS.filter((f) => !customFields.includes(f)).map((name) => (
+                  <button
+                    key={name}
+                    onClick={() => addSuggestedField(name)}
+                    className="text-xs px-2 py-1 rounded-md bg-white/5 border border-white/10 text-gray-400 hover:border-cyber-purple/50 hover:text-cyber-purple transition-colors"
+                  >
+                    + {name}
+                  </button>
+                ))}
+              </div>
+
+              {/* Selected fields as pills */}
+              {customFields.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {customFields.map((name) => (
+                    <span
+                      key={name}
+                      className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-cyber-purple/20 border border-cyber-purple/40 text-cyber-purple text-sm"
+                    >
+                      <span>{name}</span>
+                      <button
+                        onClick={() => removeField(name)}
+                        className="hover:text-cyber-pink transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Action Buttons */}
             <div className="flex space-x-4">
               <button
@@ -175,7 +281,8 @@ export default function InvoiceUpload() {
                       AI EXTRACTION IN PROGRESS
                     </p>
                     <p className="text-sm text-gray-400">
-                      Analyzing document structure and extracting financial data...
+                      Analyzing document structure and extracting financial data
+                      {customFields.length > 0 && ` + ${customFields.length} custom field${customFields.length > 1 ? 's' : ''}`}...
                     </p>
                   </div>
                 </div>
@@ -194,8 +301,8 @@ export default function InvoiceUpload() {
         </div>
         <div className="glass-card text-center p-4">
           <FileText className="h-8 w-8 text-cyber-purple mx-auto mb-2" />
-          <p className="text-sm text-gray-300 font-rajdhani">ANY FORMAT</p>
-          <p className="text-xs text-gray-500">Universal document support</p>
+          <p className="text-sm text-gray-300 font-rajdhani">CUSTOM FIELDS</p>
+          <p className="text-xs text-gray-500">Extract any data you need</p>
         </div>
         <div className="glass-card text-center p-4">
           <Zap className="h-8 w-8 text-cyber-green mx-auto mb-2" />

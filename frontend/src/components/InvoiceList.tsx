@@ -18,6 +18,8 @@ import {
   Zap,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import WelcomeModal from './WelcomeModal';
+import InfoBanner from './InfoBanner';
 
 const statusIcons: Record<string, React.ReactNode> = {
   pending: <Clock className="h-4 w-4 text-yellow-400" />,
@@ -106,6 +108,9 @@ export default function InvoiceList() {
 
   return (
     <div>
+      <WelcomeModal />
+      <InfoBanner />
+
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center space-x-3">

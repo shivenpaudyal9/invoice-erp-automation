@@ -1,9 +1,10 @@
+import json
 import os
 import shutil
 import uuid
 from datetime import datetime, date
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -65,10 +66,11 @@ def invoice_to_dict(invoice: Invoice) -> dict:
 @router.post("/upload", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED)
 async def upload_invoice(
     file: UploadFile = File(...),
+    field_names: Optional[str] = Form(None),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Upload a PDF invoice and trigger AI extraction."""
+    """Upload a PDF invoice and trigger AI extraction. Optionally pass field_names as JSON-encoded list."""
     # Validate file type
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(
@@ -112,9 +114,19 @@ async def upload_invoice(
     )
     db.commit()
 
+    # Parse custom field names if provided
+    parsed_field_names: Optional[List[str]] = None
+    if field_names:
+        try:
+            parsed_field_names = json.loads(field_names)
+            if not isinstance(parsed_field_names, list):
+                parsed_field_names = None
+        except (json.JSONDecodeError, TypeError):
+            parsed_field_names = None
+
     # Run extraction
     try:
-        result, raw_data = extraction_service.extract_from_pdf(str(file_path))
+        result, raw_data = extraction_service.extract_from_pdf(str(file_path), parsed_field_names)
 
         # Update invoice with extracted data
         invoice.vendor_name = result.vendor_name
@@ -136,6 +148,12 @@ async def upload_invoice(
         invoice.raw_extraction = raw_data
         invoice.ai_model_version = f"{AI_MODEL}:{AI_MODEL_VERSION}"
         invoice.status = InvoiceStatus.EXTRACTED.value
+
+        # Store custom fields
+        if parsed_field_names:
+            invoice.requested_fields = parsed_field_names
+        if result.custom_fields:
+            invoice.custom_fields = result.custom_fields
 
         # Add line items
         for item_data in result.line_items:
@@ -251,9 +269,15 @@ def update_invoice(
     before_state = invoice_to_dict(invoice)
 
     # Update fields
-    update_dict = update_data.model_dump(exclude_unset=True, exclude={"line_items"})
+    update_dict = update_data.model_dump(exclude_unset=True, exclude={"line_items", "custom_fields"})
     for field, value in update_dict.items():
         setattr(invoice, field, value)
+
+    # Update custom fields (merge with existing)
+    if update_data.custom_fields is not None:
+        existing = invoice.custom_fields or {}
+        existing.update(update_data.custom_fields)
+        invoice.custom_fields = existing
 
     # Update line items if provided
     if update_data.line_items is not None:
@@ -394,7 +418,9 @@ async def reextract_invoice(
     before_state = invoice_to_dict(invoice)
 
     try:
-        result, raw_data = extraction_service.extract_from_pdf(invoice.pdf_path)
+        # Reuse stored requested_fields for re-extraction
+        stored_fields = invoice.requested_fields if invoice.requested_fields else None
+        result, raw_data = extraction_service.extract_from_pdf(invoice.pdf_path, stored_fields)
 
         # Update invoice with new extracted data
         invoice.vendor_name = result.vendor_name
@@ -415,6 +441,10 @@ async def reextract_invoice(
         invoice.currency = result.currency
         invoice.raw_extraction = raw_data
         invoice.ai_model_version = f"{AI_MODEL}:{AI_MODEL_VERSION}"
+
+        # Update custom fields
+        if result.custom_fields:
+            invoice.custom_fields = result.custom_fields
 
         # Remove old line items and add new ones
         for item in invoice.line_items:

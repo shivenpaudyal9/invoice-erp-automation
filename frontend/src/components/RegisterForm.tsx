@@ -30,6 +30,7 @@ export default function RegisterForm() {
 
     try {
       await register(email, username, password);
+      localStorage.setItem('showWelcome', 'true');
       toast.success('Account created successfully');
       navigate('/');
     } catch (error: unknown) {
