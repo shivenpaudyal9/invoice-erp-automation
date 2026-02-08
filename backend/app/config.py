@@ -23,5 +23,5 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
 # AI Model info for audit logging
-AI_MODEL = "gemini-1.5-flash"
+AI_MODEL = "gemini-2.0-flash"
 AI_MODEL_VERSION = "2024-latest"
